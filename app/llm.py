@@ -25,6 +25,7 @@ from app.schema import (
     TOOL_CHOICE_TYPE,
     TOOL_CHOICE_VALUES,
     Message,
+    ToolCall,
     ToolChoice,
 )
 
@@ -688,15 +689,40 @@ class LLM:
 
             response = await self.client.chat.completions.create(**params)
 
-            # Check if response is valid
-            if not response.choices or not response.choices[0].message:
-                print(response)
-                raise ValueError("Invalid or empty response from LLM")
+            if not kwargs.get('stream'):
+                # Check if response is valid
+                if not response.choices or not response.choices[0].message:
+                    print(response)
+                    raise ValueError("Invalid or empty response from LLM")
 
-            # Update token counts
-            self.update_token_count(response.usage.prompt_tokens)
+                # Update token counts
+                self.update_token_count(response.usage.prompt_tokens)
+                logger.info(response.choices[0].message)
+                return response.choices[0].message
 
-            return response.choices[0].message
+            else:
+
+                stream_message=Message(role='assistant')
+                stream_tool_call=ToolCall()
+                async for chunk in response:
+                    # logger.info(f'{chunk.__dict__=}')
+                    content=chunk.choices[0].delta.content
+                    tool_calls=chunk.choices[0].delta.tool_calls
+                    #check if content is None
+                    if content :
+                        stream_message.content+=content
+                    if tool_calls:
+                        function=tool_calls[0].function
+                        stream_tool_call.id=tool_calls[0].id
+                        # stream_message.tool_calls[0].id=tool_calls[0].id
+                        if function :
+                            if function.name:
+                                stream_tool_call.function.name=function.name
+                            stream_tool_call.function.arguments+=function.arguments
+
+                stream_message.tool_calls.append(stream_tool_call)
+                logger.info(stream_message)
+                return stream_message
 
         except TokenLimitExceeded:
             # Re-raise token limit errors without logging
