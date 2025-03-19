@@ -1,8 +1,9 @@
-from collections import defaultdict
 from enum import Enum
 from typing import Any, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
+
+from app.logger import logger
 
 
 class Role(str, Enum):
@@ -55,23 +56,28 @@ def merge_tool_calls(tool_calls: list[ToolCall]) -> list[ToolCall]:
     """
     合并相同 id 的 ToolCall，并拼接 arguments
     """
-    merged = defaultdict(lambda: {"id": "", "function": None, "arguments": []})
+    merged = dict()
 
     for tool_call in tool_calls:
+
+        if not tool_call:
+            continue
+
         tool_id = tool_call.id
         func = tool_call.function
 
-        if not merged[tool_id]["function"]:
-            merged[tool_id]["function"] = func
-            merged[tool_id]["id"] = tool_id
-
-        # 拼接 arguments（根据类型处理）
-        if isinstance(func.arguments, list):
-            merged[tool_id]["arguments"].extend(func.arguments)
+        if not merged.get(tool_id,None):
+            merged[tool_id]=tool_call
         else:
-            merged[tool_id]["arguments"].append(func.arguments)
-
-    return [ToolCall(**item) for item in merged.values()]
+            name=func.name
+            arguments=func.arguments
+            if name :
+                if name !=merged[tool_id].function.name:
+                    merged[tool_id].function.name+=name
+            if arguments:
+                merged[tool_id].function.arguments+=arguments
+        # logger.info(merged)
+    return [ item for item in merged.values()]
 
 class Message(BaseModel):
     """Represents a chat message in the conversation"""

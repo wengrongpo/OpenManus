@@ -194,7 +194,6 @@ class LLM:
             self.api_key = llm_config.api_key
             self.api_version = llm_config.api_version
             self.base_url = llm_config.base_url
-
             # Add token counting related attributes
             self.total_input_tokens = 0
             self.max_input_tokens = (
@@ -202,7 +201,7 @@ class LLM:
                 if hasattr(llm_config, "max_input_tokens")
                 else None
             )
-
+            self.stream = llm_config.stream
             # Initialize tokenizer
             try:
                 self.tokenizer = tiktoken.encoding_for_model(self.model)
@@ -687,9 +686,12 @@ class LLM:
                     temperature if temperature is not None else self.temperature
                 )
 
+            if self.stream:
+                params["stream"]=self.stream
+
             response = await self.client.chat.completions.create(**params)
 
-            if not kwargs.get('stream'):
+            if not self.stream:
                 # Check if response is valid
                 if not response.choices or not response.choices[0].message:
                     print(response)
@@ -722,15 +724,8 @@ class LLM:
                         tool_calls_content+=content
                     if tool_calls:
                         tool_call_list.extend(tool_calls)
-                        # function=tool_calls[0].function
-                        # tool_call.id=tool_calls[0].id
-                        # # stream_message.tool_calls[0].id=tool_calls[0].id
-                        # if function :
-                        #     if function.name:
-                        #         tool_call.function.name=function.name
-                        #     tool_call.function.arguments+=function.arguments
 
-                # logger.info(stream_message)
+                # self.update_token_count(response.usage.prompt_tokens)
                 return Message.from_tool_calls(tool_calls=merge_tool_calls(tool_call_list),content=tool_calls_content)
 
         except TokenLimitExceeded:

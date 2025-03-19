@@ -52,8 +52,6 @@ class ToolCallAgent(ReActAgent):
                 ),
                 tools=self.available_tools.to_params(),
                 tool_choice=self.tool_choices,
-                stream=True,
-                stream_options={"include_usage": True},
             )
         except ValueError:
             raise
