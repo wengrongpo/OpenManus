@@ -1,3 +1,4 @@
+from collections import defaultdict
 from enum import Enum
 from typing import Any, List, Literal, Optional, Union
 
@@ -50,6 +51,27 @@ class ToolCall(BaseModel):
     type: str = "function"
     function: Function
 
+def merge_tool_calls(tool_calls: list[ToolCall]) -> list[ToolCall]:
+    """
+    合并相同 id 的 ToolCall，并拼接 arguments
+    """
+    merged = defaultdict(lambda: {"id": "", "function": None, "arguments": []})
+
+    for tool_call in tool_calls:
+        tool_id = tool_call.id
+        func = tool_call.function
+
+        if not merged[tool_id]["function"]:
+            merged[tool_id]["function"] = func
+            merged[tool_id]["id"] = tool_id
+
+        # 拼接 arguments（根据类型处理）
+        if isinstance(func.arguments, list):
+            merged[tool_id]["arguments"].extend(func.arguments)
+        else:
+            merged[tool_id]["arguments"].append(func.arguments)
+
+    return [ToolCall(**item) for item in merged.values()]
 
 class Message(BaseModel):
     """Represents a chat message in the conversation"""

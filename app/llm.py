@@ -25,8 +25,8 @@ from app.schema import (
     TOOL_CHOICE_TYPE,
     TOOL_CHOICE_VALUES,
     Message,
-    ToolCall,
     ToolChoice,
+    merge_tool_calls,
 )
 
 
@@ -701,28 +701,37 @@ class LLM:
                 return response.choices[0].message
 
             else:
-
-                stream_message=Message(role='assistant')
-                stream_tool_call=ToolCall()
+                tool_calls_content=''
+                tool_call_list=list()
                 async for chunk in response:
+
+                    # 安全获取 delta 对象
+                    choices = chunk.choices
+                    if not choices or len(choices) == 0:
+                        continue  # 跳过无效的 chunk
                     # logger.info(f'{chunk.__dict__=}')
-                    content=chunk.choices[0].delta.content
-                    tool_calls=chunk.choices[0].delta.tool_calls
+
+                    delta=choices[0].delta
+                    if not delta:
+                        continue  # 跳过无 delta 的 chunk
+
+                    content=delta.content
+                    tool_calls=delta.tool_calls
                     #check if content is None
                     if content :
-                        stream_message.content+=content
+                        tool_calls_content+=content
                     if tool_calls:
-                        function=tool_calls[0].function
-                        stream_tool_call.id=tool_calls[0].id
-                        # stream_message.tool_calls[0].id=tool_calls[0].id
-                        if function :
-                            if function.name:
-                                stream_tool_call.function.name=function.name
-                            stream_tool_call.function.arguments+=function.arguments
+                        tool_call_list.extend(tool_calls)
+                        # function=tool_calls[0].function
+                        # tool_call.id=tool_calls[0].id
+                        # # stream_message.tool_calls[0].id=tool_calls[0].id
+                        # if function :
+                        #     if function.name:
+                        #         tool_call.function.name=function.name
+                        #     tool_call.function.arguments+=function.arguments
 
-                stream_message.tool_calls.append(stream_tool_call)
-                logger.info(stream_message)
-                return stream_message
+                # logger.info(stream_message)
+                return Message.from_tool_calls(tool_calls=merge_tool_calls(tool_call_list),content=tool_calls_content)
 
         except TokenLimitExceeded:
             # Re-raise token limit errors without logging
