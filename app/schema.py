@@ -3,7 +3,6 @@ from typing import Any, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from app.logger import logger
 
 
 class Role(str, Enum):
@@ -54,7 +53,7 @@ class ToolCall(BaseModel):
 
 def merge_tool_calls(tool_calls: list[ToolCall]) -> list[ToolCall]:
     """
-    合并相同 id 的 ToolCall，并拼接 arguments
+    Merge ToolCalls with the same id and concatenate arguments
     """
     merged = dict()
 
@@ -76,7 +75,7 @@ def merge_tool_calls(tool_calls: list[ToolCall]) -> list[ToolCall]:
                     merged[tool_id].function.name+=name
             if arguments:
                 merged[tool_id].function.arguments+=arguments
-        # logger.info(merged)
+
     return [ item for item in merged.values()]
 
 class Message(BaseModel):

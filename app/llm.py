@@ -756,15 +756,14 @@ class LLM:
                 tool_call_list=list()
                 async for chunk in response:
 
-                    # 安全获取 delta 对象
+                    # Safely retrieve the delta object
                     choices = chunk.choices
                     if not choices or len(choices) == 0:
-                        continue  # 跳过无效的 chunk
-                    # logger.info(f'{chunk.__dict__=}')
+                        continue  # Skip invalid chunk
 
                     delta=choices[0].delta
                     if not delta:
-                        continue  # 跳过无 delta 的 chunk
+                        continue  # Skip chunk with no delta
 
                     content=delta.content
                     tool_calls=delta.tool_calls
@@ -774,7 +773,6 @@ class LLM:
                     if tool_calls:
                         tool_call_list.extend(tool_calls)
 
-                # self.update_token_count(response.usage.prompt_tokens)
                 return Message.from_tool_calls(tool_calls=merge_tool_calls(tool_call_list),content=tool_calls_content)
 
         except TokenLimitExceeded:
