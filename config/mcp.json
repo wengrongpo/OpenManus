@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "trino": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "-m",
+        "app.mcp.mcp_server_trino",
+        "run",
+        "mcp_server_trino"
+      ],
+      "env": {
+        "TRINO_HOST": "10.206.32.40",
+        "TRINO_PORT": "8080",
+        "TRINO_USER": "ta",
+        "TRINO_PASSWORD": "",
+        "TRINO_CATALOG": "hive",
+        "TRINO_SCHEMA": "ta"
+      }
+    }
+  }
+}
